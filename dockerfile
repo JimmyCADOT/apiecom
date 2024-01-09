@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 5000
 
 # Commande pour démarrer votre application Node.js
-CMD ["node", "server.js"]
+CMD ["yarn", "start"]
