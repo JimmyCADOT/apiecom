@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema({
     },
     email: {
         type: String,
-        required: true, 
+        required: true,
         unique: true,
         lowercase: true,
         validate: {
@@ -35,20 +35,20 @@ const userSchema = new mongoose.Schema({
         default: 'user',
     },
     timestamp: {
-        type: Date.now,
+        type: Date,
+        default: Date.now,
     },
 });
-
 
 // Hachage du mot de passe avant de sauvegarder l'utilisateur
 userSchema.pre('save', async function (next) {
     try {
         if (!this.isModified('password')) {
-           return next ();
+            return next();
         }
         const hashedPassword = await bcrypt.hash(this.password, 10);
         this.password = hashedPassword;
-        return next (error);
+        return next();
     } catch (error) {
         return next(error);
     }
@@ -58,11 +58,11 @@ userSchema.methods.comparePassword = async function (paramPassword) {
     try {
         return await bcrypt.compare(paramPassword, this.password);
     } catch (error) {
-       throw new Error(error);
+        throw new Error(error);
     }
 };
 
-// Export du modèle,  du schema et mis dans la variable User
+// Export du modèle, du schema et mis dans la variable User
 const User = mongoose.model('User', userSchema);
 
 // Export de la variable User
