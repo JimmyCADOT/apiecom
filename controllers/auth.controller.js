@@ -6,6 +6,8 @@ const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 // Import du module jwt pour les tokens
 const jwt = require('jsonwebtoken');
+// Import du module validator pour la validation des emails
+const validator = require('validator');
 
 // Fonction pour l'inscription
 module.exports.register = async (req, res) => {
@@ -36,6 +38,12 @@ module.exports.register = async (req, res) => {
 				message: 'Votre email existe deja en base de données. Veuillez en choisir un autre',
 			});
 		}
+		// Vérification de la validité email avec validator
+		if (!validator.isEmail(email)) {
+			// Renvoie une erreur si l'email n'est pas valide
+			return res.status(400).json({ message: 'Veuillez entrer un mail' });
+		}
+
 		// Création d'un nouvel utilisateur
 		const user = authModel.create({ lastname, firstname, email, password });
 		// Renvoie une réponse positive si l'utilisateur est bien enregistré

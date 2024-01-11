@@ -7,20 +7,19 @@ const productSchema = mongoose.Schema({
 	},
 	title: {
 		type: String,
-		required: [true, 'Veuillez entrer le nom du produit'],
+		required: true,
 	},
 	description: {
 		type: String,
-		required: [true, 'Veuillez renseigner la description du produit'],
+		required: true,
 	},
 	price: {
 		type: Number,
 		required: true,
 	},
-	// img: {
-	// 	type: String,
-	// 	required: true,
-	// },
+	imageUrl: {
+		type: String,
+	},
 	timestamp: {
 		type: Date,
 		default: Date.now,
