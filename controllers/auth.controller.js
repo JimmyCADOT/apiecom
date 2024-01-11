@@ -3,7 +3,7 @@ const authModel = require('../models/auth.model');
 // Import de la validation des données
 const { validationResult } = require('express-validator');
 // Import du modèle de hachage bcrypt
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 // Import du module jwt pour les tokens
 const jwt = require('jsonwebtoken');
 

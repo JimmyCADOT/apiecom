@@ -1,4 +1,4 @@
-// Chargement des variables d'environnement 
+// Chargement des variables d'environnement
 require('dotenv').config();
 
 // Import des modules nécessaires
@@ -8,12 +8,16 @@ const cors = require('cors');
 
 // Import des routes pour l'authentification
 const authRoutes = require('./routes/auth.route');
+
+// Import des routes pour la création  des produits
+const productRoutes = require('./routes/product.route');
+
 // Import de la configuration de la base de données
 const connectDB = require('./config/db.js');
 // Initialisation de l'application Express
 const app = express();
 
-// Middleware pour traiter les requêtes JSON 
+// Middleware pour traiter les requêtes JSON
 app.use(express.json());
 
 // Middleware pour parser les corps de requêtes
@@ -23,30 +27,33 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Utilisation des routes pour l'authentification
 app.use('/api', authRoutes);
 
+// Utilisation des routes pour la création des produits
+app.use('/api', productRoutes);
+
 // Configuration des options cors
 const corsOptions = {
-    credentials: true,
-    optionsSuccessStatus: 200,
-    methods: 'GET, HEAD, PUT, PATCH, POST, DELETE',
-    preflightContinue: false,
+	credentials: true,
+	optionsSuccessStatus: 200,
+	methods: 'GET, HEAD, PUT, PATCH, POST, DELETE',
+	preflightContinue: false,
 };
 
 // Middleware pour gérer les cors
 app.use(cors(corsOptions));
 
-// Définition du port du démarrage du serveur 
+// Définition du port du démarrage du serveur
 const PORT = process.env.PORT || 5200;
 
-// Fonction pour démarrer le serveur 
+// Fonction pour démarrer le serveur
 const start = async () => {
-  try {
-    // Connexion à la base de données
-    await connectDB();
-    // Démarrage du serveur sur le port spécifié
-    app.listen(PORT, () => console.log(`Le serveur a démarrer sur le port ${PORT}`));
-  } catch (error) {
-    console.log(error);
-  }
+	try {
+		// Connexion à la base de données
+		await connectDB();
+		// Démarrage du serveur sur le port spécifié
+		app.listen(PORT, () => console.log(`Le serveur a démarrer sur le port ${PORT}`));
+	} catch (error) {
+		console.log(error);
+	}
 };
-// Appel de la fonction pour démarrer le serveur 
+// Appel de la fonction pour démarrer le serveur
 start();
