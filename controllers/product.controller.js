@@ -91,3 +91,42 @@ module.exports.deleteProduct = async (req, res) => {
 		res.status(500).json({ message: 'Erreur lors de la suppression  du produit' });
 	}
 };
+module.exports.updateProduct = async (req, res) => {
+	try {
+		//verifier si l'utilisateur est admin
+		if (req.user.role !== 'admin') {
+			// retour d'un message d'erreur
+			return res
+				.status(403)
+				.json({ message: 'Action non autorise seul un admin peut supprimé un produit' });
+		}
+		// Déclaration de la variables qui vas rechercher l'id du produit
+		const productId = req.params.id;
+		// modiffication du produit par son id
+		const existingProduct = await ProductModel.findById(productId);
+		// Condition si le produit est introuvables
+		if (!existingProduct) {
+			return res.status(404).json({ message: 'produit non trouvé' });
+		}
+		// Mettre a jour les propriété du produits avec les données du corps de la requete
+		existingProduct.title = req.body.title || existingProduct.title; //pour changer tt les mots pareille faire ctrl+d apres l'avoir selectionner
+		existingProduct.description = req.body.description || existingProduct.description;
+		existingProduct.price = req.body.price || existingProduct.price;
+		// Vérifier si une nouvelle iage est télécharger, mettre a jour le chemin de l'image
+		if (req.file) {
+			// Supprimer l'ancienne image si il y en a une
+			if (existingProduct.image) {
+				fs.unlinkSync(existingProduct.image);
+			}
+			existingProduct.imageUrl = req.file.path;
+		}
+		// Enregistré les modification dans la bdd
+		const updateProduct = await existingProduct.save();
+		// Réponse de succès
+		res.status(200).json({ message: 'Produit mis a jour avec succès', product: updateProduct });
+	} catch (error) {
+		// Réponse erreur serveur
+		console.error('Erreur lors de la modification du produit : ', error.message);
+		res.status(500).json({ message: 'Erreur lors de la modification du produit' });
+	}
+};
