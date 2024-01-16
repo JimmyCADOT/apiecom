@@ -8,6 +8,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 // Import du module validator pour la validation des emails
 const validator = require('validator');
+// Import du module cloudinary
+const cloudinary = require('cloudinary').v2;
 
 // Fonction pour l'inscription
 module.exports.register = async (req, res) => {
@@ -21,35 +23,46 @@ module.exports.register = async (req, res) => {
 			return res.status(400).json({ errors: errors.array() });
 		}
 		// Récupération des données du formulaire
-		const { lastname, firstname, email, password } = req.body;
-		// Vérification de la longueur du mot de passe  avec une condition
-		if (password.length < 6) {
-			// Vérification de la longueur du mot de passe (6 caractères minimum)
-			// Renvoie une erreur si le nom de passe est trop court
-			return res
-				.status(400)
-				.json({ message: 'Le mot de passe doit contenir au moins 6 caractères' });
+		const { lastname, firstname, birthday, address, zipcode, city, phone, email, password } =
+			req.body;
+
+		// Vérifier si une image est téléchargée
+		if (!req.cloudinaryUrl || !req.file) {
+			return res.status(400).json({ message: 'Veuillez télécharger une image' });
 		}
-		// Vérification de l'email si il existe déjà dans la base de données
-		const existingUser = await authModel.findOne({ email });
+
+		// Vérifier si l'email existe déjà dans la table auth
+		const existingAuth = await authModel.findOne({ email });
 		// Renvoie une erreur si l'email existe déjà
-		if (existingUser) {
+		if (existingAuth) {
 			return res.status(400).json({
 				message: 'Votre email existe deja en base de données. Veuillez en choisir un autre',
 			});
 		}
-		// Vérification de la validité email avec validator
-		if (!validator.isEmail(email)) {
-			// Renvoie une erreur si l'email n'est pas valide
-			return res.status(400).json({ message: 'Veuillez entrer un mail' });
-		}
+
+		// Utilisation  de l'url de cloudinary et du public_id  du middleware
+		const avatarUrl = req.cloudinaryUrl;
+		const avatarPublicId = req.file.public_id;
 
 		// Création d'un nouvel utilisateur
-		const user = authModel.create({ lastname, firstname, email, password });
+		const auth = authModel.create({
+			lastname,
+			firstname,
+			birthday,
+			address,
+			zipcode,
+			city,
+			phone,
+			email,
+			password,
+			avatarUrl,
+			avatarPublicId,
+		});
+
 		// Renvoie une réponse positive si l'utilisateur est bien enregistré
-		res.status(200).json({ message: 'Utilisateur créé avec succès', user });
+		res.status(200).json({ message: 'Utilisateur créé avec succès', auth });
 	} catch (error) {
-		// Renvoie une erreur si il y a un problème lors de l'enregistrement de l'utilisateur
+		console.error(error);
 		res.status(500).json({ message: "Erreur lors de l'enregistrement de l'utilisateur" });
 	}
 };
@@ -68,10 +81,10 @@ module.exports.login = async (req, res) => {
 		const { email, password } = req.body;
 
 		// Vérification si l'utilisateur existe déjà dans la base de données
-		const user = await authModel.findOne({ email });
+		const Auth = await authModel.findOne({ email });
 
 		// Si l'utilisateur n'existe pas,  renvoie une erreur
-		if (!user) {
+		if (!Auth) {
 			console.log('Utilisateur non trouvé');
 			return res.status(400).json({ message: 'Email invalide' });
 		}
@@ -80,7 +93,7 @@ module.exports.login = async (req, res) => {
 			// user.password = le mot de passe haché en base de données
 			// password = mot de passe entré par l'utilisateur
 			password,
-			user.password
+			Auth.password
 		);
 		// Si le mot de passe est incorrect,  renvoie une erreur
 		if (!isPasswordValid) {
@@ -92,9 +105,9 @@ module.exports.login = async (req, res) => {
 
 		// Création du token jwt
 		const payload = {
-			user: {
-				id: user._id,
-				email: user.email,
+			Auth: {
+				id: Auth._id,
+				email: Auth.email,
 			},
 		};
 		// Définition de la variable pour le token
@@ -108,5 +121,149 @@ module.exports.login = async (req, res) => {
 		res.status(500).json({ message: 'Erreur lors de la connexion' });
 	}
 };
+// Fonction pour la modification du profil
+module.exports.update = async (req, res) => {
+	try {
+		// Déclaration de variable pour la gestion des erreurs de validations
+		const errors = validationResult(req);
 
-// Renvoie une erreur si il y a un problème lors de la connexion avec l'utilisateur
+		// Vérification si il a des erreurs
+		if (!errors.isEmpty) {
+			return res.status(400).json({ errors: array() });
+		}
+
+		// Récupération de l'id de l'utilisateur pour le mettre en param de requête
+		const userId = req.params.id;
+
+		// Récupération des données du formulaire
+		const { lastname, firstname, birthday, address, zipcode, city, phone, email } = req.body;
+
+		// Vérifier si l'utilisateur existe avant la mise à jour
+		const existingUser = await authModel.findById(userId);
+
+		// Condition si l'utilisateur n'existe pas en base de données
+		if (!existingUser) {
+			return res.status(404).json({ message: 'Utilisateur non trouvé' });
+		}
+		// Mettre à jour le chemin de l'image
+		if (req.file) {
+			// Supprimer l'ancienne image sur cloudinary si elle existe
+			if (existingUser.avatarPublicId) {
+				await cloudinary.uploader.destroy(existingUser.avatarPublicId);
+			}
+
+			// Redonne une nouvelle url et un nouvel a l'image
+			existingUser.avatarUrl = req.cloudinaryUrl;
+			existingUser.avatarPublicId = req.file.public_id;
+		}
+		// Mettre à jour les informations de l'utilisateur
+		existingUser.lastname = lastname;
+		existingUser.firstname = firstname;
+		existingUser.birthday = birthday;
+		existingUser.address = address;
+		existingUser.zipcode = zipcode;
+		existingUser.city = city;
+		existingUser.phone = phone;
+
+		// Mettre à jour l'email uniquement si fourni dans la requête
+		if (email) {
+			existingUser.email = email;
+		}
+
+		// Sauvegarder les modifications
+		await existingUser.save();
+
+		// Code de réussite avec log
+		res.status(200).json({ message: 'Utilisateur mis à jour avec succès', user: existingUser });
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({ message: 'Erreur lors de la mise à jour du profil utilisateur' });
+	}
+};
+module.exports.delete = async (req, res) => {
+	try {
+		// Déclaration de la variable qui va rechercher l'id utilisateur pour le mettre en params url
+		const userId = req.params.id;
+
+		// Déclaration de variable qui va vérifier si l'utilisateur existe
+		const existingUser = await authModel.findById(userId);
+
+		// Suppression de l'avatar de cloudinary si celui ci existe
+		if (existingUser.avatarPublicId) {
+			await cloudinary.uploader.destroy(existingUser.avatarPublicId);
+		}
+
+		//  Supprimer l'utilisateur de la base de données
+		await authModel.findByIdAndDelete(userId);
+
+		// Message de réussite
+		res.status(200).json({ message: 'Utilisateur supprimé avec succès' });
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({ message: "Erreur lors de la suppression de l'utilisateur" });
+	}
+};
+module.exports.getAllUsers = async (req, res) => {
+	try {
+		// Verifier si l'utilisateur est admin
+		if (req.user.role !== 'admin') {
+			// Retour d'un message d'erreur
+			return res
+				.status(403)
+				.json({ message: 'Action non autorisée. Seul un admin peut créer un produit' });
+		}
+		const users = await authModel.find();
+
+		res.status(200).json({ message: 'Liste des utilisateurs', users });
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({ message: 'Erreur lors de la recupération des utilisateurs' });
+	}
+};
+
+module.exports.getUserById = async (req, res) => {
+	try {
+		// Verifier si l'utilisateur est admin
+		if (req.user.role !== 'admin') {
+			// Retour d'un message d'erreur
+			return res
+				.status(403)
+				.json({ message: 'Action non autorisée. Seul un admin peut créer un produit' });
+		}
+
+		// Récuperer l'id de l'utilisateur
+		const userId = req.params.id;
+
+		// Vérifier si l'utilisateur existe en base de données
+		const user = await authModel.findById(userId);
+
+		// Condition si l'utilisateur n'est pas en bdd
+		if (!user) {
+			return res.status(404).json({ message: 'Utilisateur non trouvé' });
+		}
+		// Message de réussite
+		res.status(200).json({ user });
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({ message: "Erreur lors de la recupération de l'utilisateur" });
+	}
+};
+module.exports.dashboard = async (req, res) => {
+	try {
+		// Verifier si l'utilisateur est un admin
+		if (req.user.role === 'admin') {
+			// Definition de req.isAdmin sera egal a true pour les admins
+			req.isAdmin = true;
+			// Envoyer une réponse de succès
+			return res.status(200).json({ message: 'Bienvenue Admin' });
+		} else {
+			// Envoyer une réponse pour les utilisateurs non admin
+			return res.status(403).json({
+				message: 'Action non autorisée, seuls les admin peuvent acceder à cette page',
+			});
+		}
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({ message: 'Erreur lors de la connexion' });
+	}
+};

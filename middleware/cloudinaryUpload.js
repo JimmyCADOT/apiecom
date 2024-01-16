@@ -50,7 +50,7 @@ const cloudinaryUpload = async (req, res, next) => {
 					})
 					.end(req.file.buffer);
 				console.log('Fin du middleware cloudinaryUpload');
-			} catch (cloudinary) {
+			} catch (cloudinaryError) {
 				console.error('Erreur lors du téléversement sur cloudinary : ', cloudinaryError);
 				res.status(500).json({ message: 'Erreur lors du téléversement sur cloudinary' });
 			}

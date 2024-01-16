@@ -19,16 +19,11 @@ router.get('/product/:id', productController.getProductById);
 
 //Route pour modifier un produit (accessible uniquement par l'admin)
 router.put(
-	'/update-product/ :id',
+	'/update-product/:id',
 	authMiddleware.authenticate,
 	cloudinaryUpload,
 	productController.updateProduct
 );
 // Route pour supprimer un produit (accessible uniquement par l'admin)
-router.delete(
-	'/delete-product/:id',
-	authMiddleware.authenticate,
-	cloudinaryUpload,
-	productController.deleteProduct
-);
+router.delete('/delete-product/:id', authMiddleware.authenticate, productController.deleteProduct);
 module.exports = router;
