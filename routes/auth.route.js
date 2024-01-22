@@ -9,6 +9,12 @@ router.post('/register', cloudinaryUpload, authController.register);
 // Route pour vérifier l'email
 router.get('/verify-email/:token', authController.verifyEmail);
 
+// Route pour envoyer un email de réinitialisation de mot de passe
+router.post('/forgot-password', authController.forgotPassword);
+
+// Route pour réinitialiser le mot de passe
+router.put('/update-password/:token', authController.updatePassword);
+
 // Route pour la connexion
 router.post('/login', authController.login);
 
