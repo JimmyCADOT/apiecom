@@ -32,19 +32,19 @@ router.get('/api/user/:id', authMiddleware.authenticate, authController.getUserB
 
 // Route pour modifier le profil d'un utilisateur (admin)
 router.put(
-	'/update-user/:id',
+	'/api/update-user/:id',
 	authMiddleware.authenticate,
 	cloudinaryUpload,
 	authController.updateUser
 );
 
 // Route pour supprimer un utilisateur (admin)
-router.delete('/delete-user/:id', authMiddleware.authenticate, authController.deleteUser);
+router.delete('/api/delete-user/:id', authMiddleware.authenticate, authController.deleteUser);
 
 // Route pour voir mon profil
-router.get('/profil/:id', authMiddleware.verifToken, authController.getProfile);
+router.get('/api/profil/:id', authMiddleware.verifToken, authController.getProfile);
 
 //Route protegée
-router.get('/dashboard', authMiddleware.authenticate, authController.dashboard);
+router.get('/api/dashboard', authMiddleware.authenticate, authController.dashboard);
 
 module.exports = router;

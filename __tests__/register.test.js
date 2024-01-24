@@ -29,14 +29,14 @@ describe('Register road testing', () => {
 		const response = await request(app)
 			.post('/api/register')
 			// Remplissage des champs du formulaire
-			.field('lastname', 'Cadot')
-			.field('firstname', 'Jimmy')
+			.field('lastname', 'Tario')
+			.field('firstname', 'Tario')
 			.field('birthday', '27-03-1994')
 			.field('address', '23 Rue de la rue')
-			.field('zipcode', '50400')
+			.field('zipcode', '58934')
 			.field('city', 'Compiègne')
 			.field('phone', '0607080910')
-			.field('email', 'exemple@gmail.com')
+			.field('email', 'tarrio@gmail.com')
 			.field('password', '123456')
 			// Attache un fichier à la requête (exemple image)
 			.attach('image', path.resolve(__dirname, '../image/téléchargement.png'));

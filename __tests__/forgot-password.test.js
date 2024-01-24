@@ -40,7 +40,7 @@ describe('Forgot password API', () => {
 	it('Should send a reset password email if the email exists', async () => {
 		// Supposons entré un nouvel utilisateur ou le rechercher en base de données
 		const existingUser = {
-			_id: '65ae5f90c5597ebdef05e227',
+			_id: '65af8f6b90320202053c08af',
 			email: 'exemple@gmail.com',
 			resetPasswordToken: 'someToken',
 			resetPasswordTokenExpires: new Date(),
