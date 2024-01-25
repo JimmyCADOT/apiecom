@@ -320,12 +320,18 @@ module.exports.login = async (req, res) => {
 			return res.status(400).json({ message: 'Email invalide' });
 		}
 
-		// Verification si le compte est vérouillé
+		// Verification si le compte est vérouillé et mettre 5 minutes de verouillage
 		if (user.failedLoginAttempts > 3) {
+			console.log('Compte verouillé');
+			// Ajouter 5 minutes de verouillage
+			user.lockUntil = Date.now() + 5 * 60 * 1000;
+			await user.save();
+			return res.status(400).json({ message: 'Compte verouillé, Réesayer plus tard' });
+		}
+		if (user.lockUntil && user.lockUntil > Date.now()) {
 			console.log('Compte verouillé');
 			return res.status(400).json({ message: 'Compte verouillé, Réesayer plus tard' });
 		}
-
 		// Verification du mot de passe
 		const isPasswordValid = await bcrypt.compare(password, user.password);
 
@@ -334,6 +340,7 @@ module.exports.login = async (req, res) => {
 			console.log('Mot de passe incorrect');
 			// Cette ligne fais en sorte de compter le nombre de tentative de connexion avec le mauvais mot de passe
 			user.failedLoginAttempts += 1;
+			user.lockUntil = Date.now() + 5 * 60 * 1000;
 			await user.save();
 			return res.status(400).json({ message: 'Mot de passe incorrect' });
 		}
