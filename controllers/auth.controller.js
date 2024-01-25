@@ -1,7 +1,7 @@
 // Import du model auth
 const authModel = require('../models/auth.model');
 // Import de la validation des données
-const { validationResult } = require('express-validator');
+const { validationResult, check } = require('express-validator');
 // Import du modèle de hachage bcrypt
 const bcrypt = require('bcryptjs');
 // Import du module jwt pour les tokens
@@ -66,6 +66,16 @@ const sendResetPassword = async (to, resetPasswordToken) => {
 // Fonction pour l'inscription
 module.exports.register = async (req, res) => {
 	try {
+		// Ces lignes vont vérifier que les champs ne soient pas vide au moment de l'execution de la requête
+		await check('lastname', 'Veuillez entrer votre nom').notEmpty().run(req);
+		await check('firstname', 'Veuillez entrer votre prénom').notEmpty().run(req);
+		await check('birthday', 'Veuillez entrer votre date de naissance').notEmpty().run(req);
+		await check('address', 'Veuillez entrer votre adresse').notEmpty().run(req);
+		await check('zipcode', 'Veuillez entrer votre code postal').notEmpty().run(req);
+		await check('city', 'Veuillez entrer votre ville').notEmpty().run(req);
+		await check('email', 'Veuilez entrer votre mail').notEmpty().run(req);
+		await check('phone', 'Veuillez entrer votre adresse mail').notEmpty().run(req);
+		await check('password', 'Veuillez entrer votre mot de passe').notEmpty().run(req);
 		const errors = validationResult(req);
 
 		if (!errors.isEmpty()) {
@@ -144,6 +154,15 @@ module.exports.register = async (req, res) => {
 // Fonction pour la vérification email
 module.exports.verifyEmail = async (req, res) => {
 	try {
+		// Validation du paramètre token
+		await check('token', 'Token de vérification invalide').notEmpty().isString().run(req);
+
+		const errors = validationResult(req);
+
+		if (!errors.isEmpty()) {
+			return res.status(400).json({ errors: errors.array() });
+		}
+
 		// Récupération du token pour le mettre en paramètre d'url
 		const { token } = req.params;
 
@@ -178,6 +197,15 @@ module.exports.verifyEmail = async (req, res) => {
 // Fonction pour la demande de réinitialisation de mot de passe par email
 module.exports.forgotPassword = async (req, res) => {
 	try {
+		// Validation du paramètre token
+		await check('email', 'Veuillez entrer un email valide').isEmail().run(req);
+
+		const errors = validationResult(req);
+
+		if (!errors.isEmpty()) {
+			return res.status(400).json({ errors: errors.array() });
+		}
+
 		// Email que l'on va devoir entré dans postman pour recevoir l'email
 		const { email } = req.body;
 
@@ -223,6 +251,18 @@ module.exports.updatePassword = async (req, res) => {
 		// Ajout de deux nouveaux champs dans la requête
 		const { newPassword, confirmNewPassword } = req.body;
 
+		// Validation du paramètre token
+		await check('newPassword', 'Le nouveau mot de passe est requis').notEmpty().run(req);
+		await check('confirmNewPassword', 'La confirmation du nouveau mot de passe est requise')
+			.notEmpty()
+			.run(req);
+
+		const errors = validationResult(req);
+
+		if (!errors.isEmpty()) {
+			return res.status(400).json({ errors: errors.array() });
+		}
+
 		// Vérifier si les champs de mot de passe correspondent
 		if (newPassword !== confirmNewPassword) {
 			return res.status(400).json({ message: 'Les mots de passe ne correspondent pas' });
@@ -257,6 +297,10 @@ module.exports.updatePassword = async (req, res) => {
 // Fonction pour la connexion
 module.exports.login = async (req, res) => {
 	try {
+		// Validation du paramètre token
+		await check('email', 'Veuillez entrer votre email').isEmail().run(req);
+		await check('password', 'Veuillez entrer votre mot de passe').notEmpty().run(req);
+
 		// Recuperation des erreurs de validations
 		const errors = validationResult(req);
 		// Verification si il y a des erreurs de validation
@@ -275,14 +319,28 @@ module.exports.login = async (req, res) => {
 			console.log('Utilisateur non trouvé');
 			return res.status(400).json({ message: 'Email invalide' });
 		}
+
+		// Verification si le compte est vérouillé
+		if (user.failedLoginAttempts > 3) {
+			console.log('Compte verouillé');
+			return res.status(400).json({ message: 'Compte verouillé, Réesayer plus tard' });
+		}
+
 		// Verification du mot de passe
 		const isPasswordValid = await bcrypt.compare(password, user.password);
 
 		// Si le mot de passe est incorrect, renvoie une erreur
 		if (!isPasswordValid) {
 			console.log('Mot de passe incorrect');
+			// Cette ligne fais en sorte de compter le nombre de tentative de connexion avec le mauvais mot de passe
+			user.failedLoginAttempts += 1;
+			await user.save();
 			return res.status(400).json({ message: 'Mot de passe incorrect' });
 		}
+
+		// Reinitialisation du nombre de tentatives en cas de connexion réussie
+		user.failedLoginAttempts = 0;
+		await user.save();
 		// Renvoie d'un message de succès
 		console.log('connexion réussie !');
 
@@ -308,6 +366,14 @@ module.exports.login = async (req, res) => {
 // Fontion pour voir mon profil
 module.exports.getProfile = async (req, res) => {
 	try {
+		// Validation du paramètre id
+		await check('id', "Identifiant d'utilisateur invalide").notEmpty().isMongoId().run(req);
+
+		const errors = validationResult(req);
+
+		if (!errors.isEmpty) {
+			return res.status(400).json({ errors: errors.array() });
+		}
 		// Récuperer l'id de l'utilisateur
 		const userId = req.params.id;
 
@@ -328,13 +394,18 @@ module.exports.getProfile = async (req, res) => {
 // Fonction pour la modification du profil
 module.exports.update = async (req, res) => {
 	try {
-		// Déclaration de variables pour la gestion des erreurs de validations
-		const errors = validationResult(req);
-
-		// Verification si il y a des erreurs
-		if (!errors.isEmpty) {
-			return res.status(400).json({ errors: errors.array() });
-		}
+		// Validation des champs de données
+		await check('lastname', 'Veuillez entrer votre nom').notEmpty().run(req);
+		await check('firstname', 'Veuillez entrer votre prénom').notEmpty().run(req);
+		await check('birthday', 'Veuillez entrer votre date de naissance').notEmpty().run(req);
+		await check('address', 'Veuillez entrer votre adresse').notEmpty().run(req);
+		await check('zipcode', 'Veuillez entrer votre code postal').notEmpty().run(req);
+		await check('city', 'Veuillez entrer votre ville').notEmpty().run(req);
+		await check('email', 'Veuilez entrer votre mail').optional().isEmail().run(req);
+		await check('phone', 'Veuillez entrer votre adresse mail').notEmpty().run(req);
+		await check('NewPassword', 'Veuillez entrer un nouveau mot de passe')
+			.optional()
+			.notEmpty.run(req);
 
 		// Recupération de l'id de l'utilisateur pour le mettre en param de requête
 		const userId = req.params.id;
